@@ -1,24 +1,65 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+// MUST be the first import - Polyfills for React Native compatibility
+import '../polyfills';
+import React, { useState, useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
+import AppLoadingScreen from '../components/AppLoadingScreen';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+// Keep the native splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [showMainApp, setShowMainApp] = useState(false);
 
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Hide native splash screen immediately (custom loading will take over)
+        await SplashScreen.hideAsync();
+        
+        // Show AppLoadingScreen for exactly 4 seconds
+        setTimeout(() => {
+          setShowMainApp(true);
+        }, 4000);
+        
+      } catch (e) {
+        console.warn('Error during app preparation:', e);
+        setShowMainApp(true); // Show app anyway on error
+      }
+    }
+
+    prepare();
+  }, []);
+
+  // Show loading screen for 4 seconds
+  if (!showMainApp) {
+    return <AppLoadingScreen onFinish={() => {}} />;
+  }
+
+  // Show main app after 4 seconds
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="confirm-ride" 
+            options={{ 
+              headerShown: false,
+              presentation: 'card',
+              animation: 'slide_from_bottom',
+            }} 
+          />
+        </Stack>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
